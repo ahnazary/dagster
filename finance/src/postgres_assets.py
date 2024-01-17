@@ -129,3 +129,20 @@ def valid_tickers_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> T
     metadata = MetaData()
     return Table("valid_tickers", metadata, schema=schema, autoload_with=engine)
 
+
+defs = Definitions(
+    assets=[
+        neon_postgres_engine,
+        postgres_schema,
+        balance_sheet_table,
+        cashflow_table,
+        income_stmt_table,
+        financials_table,
+        tickers_list_table,
+        valid_tickers_table,
+    ],
+    resources={
+        "io_manager": mem_io_manager,
+    },
+    executor=in_process_executor,
+)
