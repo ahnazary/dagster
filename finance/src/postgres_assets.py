@@ -15,7 +15,7 @@ logger = custom_logger(__name__)
 
 
 @asset
-def neon_postgres_engine():
+def neon_postgres_engine() -> sqlalchemy.engine.base.Engine:
     """
     Create a postgres engine for neon
     """
@@ -32,7 +32,7 @@ def neon_postgres_engine():
 
 
 @asset
-def postgres_schema():
+def postgres_schema() -> str:
     """
     Create a postgres schema
     """
@@ -46,7 +46,7 @@ def postgres_schema():
         "schema": AssetIn("postgres_schema"),
     }
 )
-def balance_sheet_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def balance_sheet_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a balance sheet table object
     """
@@ -61,7 +61,7 @@ def balance_sheet_table(engine: sqlalchemy.engine.base.Engine, schema: str):
         "schema": AssetIn("postgres_schema"),
     }
 )
-def cashflow_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def cashflow_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a cashflow table object
     """
@@ -76,7 +76,7 @@ def cashflow_table(engine: sqlalchemy.engine.base.Engine, schema: str):
         "schema": AssetIn("postgres_schema"),
     }
 )
-def income_stmt_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def income_stmt_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a income statement table object
     """
@@ -91,7 +91,7 @@ def income_stmt_table(engine: sqlalchemy.engine.base.Engine, schema: str):
         "schema": AssetIn("postgres_schema"),
     }
 )
-def financials_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def financials_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a financials table object
     """
@@ -106,7 +106,7 @@ def financials_table(engine: sqlalchemy.engine.base.Engine, schema: str):
         "schema": AssetIn("postgres_schema"),
     }
 )
-def tickers_list_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def tickers_list_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a tickers list table object
     """
@@ -121,7 +121,7 @@ def tickers_list_table(engine: sqlalchemy.engine.base.Engine, schema: str):
         "schema": AssetIn("postgres_schema"),
     }
 )
-def valid_tickers_table(engine: sqlalchemy.engine.base.Engine, schema: str):
+def valid_tickers_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
     """
     Create a valid tickers table object
     """
@@ -129,20 +129,3 @@ def valid_tickers_table(engine: sqlalchemy.engine.base.Engine, schema: str):
     metadata = MetaData()
     return Table("valid_tickers", metadata, schema=schema, autoload_with=engine)
 
-
-defs = Definitions(
-    assets=[
-        neon_postgres_engine,
-        postgres_schema,
-        balance_sheet_table,
-        cashflow_table,
-        income_stmt_table,
-        financials_table,
-        tickers_list_table,
-        valid_tickers_table,
-    ],
-    resources={
-        "io_manager": mem_io_manager,
-    },
-    executor=in_process_executor,
-)
