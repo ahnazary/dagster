@@ -8,7 +8,15 @@ import sqlalchemy
 from sqlalchemy import MetaData, Table, create_engine
 
 import config
-from dagster import AssetIn, Definitions, asset, in_process_executor, mem_io_manager
+from dagster import (
+    AssetIn,
+    AssetOut,
+    Definitions,
+    asset,
+    in_process_executor,
+    mem_io_manager,
+    multi_asset,
+)
 from finance.src.utils import custom_logger
 
 logger = custom_logger(__name__)
@@ -40,106 +48,58 @@ def postgres_schema() -> str:
     return config.POSTGRES_SCHEMA
 
 
-@asset(
+@multi_asset(
     ins={
         "engine": AssetIn("neon_postgres_engine"),
         "schema": AssetIn("postgres_schema"),
-    }
+    },
+    outs={
+        "balance_sheet_table": AssetOut("balance_sheet_table"),
+        "cashflow_table": AssetOut("cashflow_table"),
+        "income_stmt_table": AssetOut("income_stmt_table"),
+        "financials_table": AssetOut("financials_table"),
+        "tickers_list_table": AssetOut("tickers_list_table"),
+        "valid_tickers_table": AssetOut("valid_tickers_table"),
+    },
 )
-def balance_sheet_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
-    """
-    Create a balance sheet table object
-    """
-    logger.info("Creating balance sheet table object")
-    metadata = MetaData()
-    return Table("balance_sheet", metadata, schema=schema, autoload_with=engine)
-
-
-@asset(
-    ins={
-        "engine": AssetIn("neon_postgres_engine"),
-        "schema": AssetIn("postgres_schema"),
-    }
-)
-def cashflow_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
-    """
-    Create a cashflow table object
-    """
-    logger.info("Creating cashflow table object")
-    metadata = MetaData()
-    return Table("cashflow", metadata, schema=schema, autoload_with=engine)
-
-
-@asset(
-    ins={
-        "engine": AssetIn("neon_postgres_engine"),
-        "schema": AssetIn("postgres_schema"),
-    }
-)
-def income_stmt_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
-    """
-    Create a income statement table object
-    """
-    logger.info("Creating income statement table object")
-    metadata = MetaData()
-    return Table("income_stmt", metadata, schema=schema, autoload_with=engine)
-
-
-@asset(
-    ins={
-        "engine": AssetIn("neon_postgres_engine"),
-        "schema": AssetIn("postgres_schema"),
-    }
-)
-def financials_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
-    """
-    Create a financials table object
-    """
-    logger.info("Creating financials table object")
-    metadata = MetaData()
-    return Table("financials", metadata, schema=schema, autoload_with=engine)
-
-
-@asset(
-    ins={
-        "engine": AssetIn("neon_postgres_engine"),
-        "schema": AssetIn("postgres_schema"),
-    }
-)
-def tickers_list_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
-    """
-    Create a tickers list table object
-    """
-    logger.info("Creating tickers list table object")
-    metadata = MetaData()
-    return Table("tickers_list", metadata, schema=schema, autoload_with=engine)
-
-
-@asset(
-    ins={
-        "engine": AssetIn("neon_postgres_engine"),
-        "schema": AssetIn("postgres_schema"),
-    }
-)
-def valid_tickers_table(engine: sqlalchemy.engine.base.Engine, schema: str) -> Table:
+def postgres_assets(engine: sqlalchemy.engine.base.Engine, schema: str):
     """
     Create a valid tickers table object
     """
     logger.info("Creating valid tickers table object")
     metadata = MetaData()
-    return Table("valid_tickers", metadata, schema=schema, autoload_with=engine)
+    balance_sheet_table = Table(
+        "balance_sheet", metadata, schema=schema, autoload_with=engine
+    )
+    cashflow_table = Table("cashflow", metadata, schema=schema, autoload_with=engine)
+    income_stmt_table = Table(
+        "income_stmt", metadata, schema=schema, autoload_with=engine
+    )
+    financials_table = Table(
+        "financials", metadata, schema=schema, autoload_with=engine
+    )
+    tickers_list_table = Table(
+        "tickers_list", metadata, schema=schema, autoload_with=engine
+    )
+    valid_tickers_table = Table(
+        "valid_tickers", metadata, schema=schema, autoload_with=engine
+    )
 
-
-defs = Definitions(
-    assets=[
-        neon_postgres_engine,
-        postgres_schema,
+    return (
         balance_sheet_table,
         cashflow_table,
         income_stmt_table,
         financials_table,
         tickers_list_table,
         valid_tickers_table,
+    )
+
+
+defs = Definitions(
+    assets=[
+        neon_postgres_engine,
+        postgres_schema,
+        postgres_assets,
     ],
     resources={
         "io_manager": mem_io_manager,
