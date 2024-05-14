@@ -1,17 +1,17 @@
-from finance.src.utils import custom_logger
-from finance.src.postgres_assets import (
-    neon_postgres_engine,
-    postgres_schema,
-    balance_sheet_table,
-    cashflow_table,
-    income_stmt_table,
-    financials_table,
-    valid_tickers_table,
-    tickers_list_table,
-)
+from sqlalchemy import asc, func, select
 
 from dagster import AssetIn, Definitions, asset, in_process_executor, mem_io_manager
-from sqlalchemy import asc, func, select
+from finance.src.postgres_assets import (
+    balance_sheet_table,
+    cashflow_table,
+    financials_table,
+    income_stmt_table,
+    neon_postgres_engine,
+    postgres_schema,
+    tickers_list_table,
+    valid_tickers_table,
+)
+from finance.src.utils import custom_logger
 
 
 @asset
