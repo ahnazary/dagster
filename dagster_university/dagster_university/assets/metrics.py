@@ -1,17 +1,86 @@
-from dagster import asset
-
-import plotly.express as px
-import plotly.io as pio
-import geopandas as gpd
+import os
 
 import duckdb
-import os
+import geopandas as gpd
+import plotly.express as px
+import plotly.io as pio
+import requests
+from dagster import asset
 
 from . import constants
 
-@asset(
-    deps=["taxi_trips", "taxi_zones"]
-)
+
+@asset
+def taxi_trips_file():
+    """The raw parquet files for the taxi trips dataset. Sourced from the NYC Open Data portal."""
+    month_to_fetch = "2023-03"
+    raw_trips = requests.get(
+        f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{month_to_fetch}.parquet"
+    )
+
+    with open(
+        constants.TAXI_TRIPS_TEMPLATE_FILE_PATH.format(month_to_fetch), "wb"
+    ) as output_file:
+        output_file.write(raw_trips.content)
+
+
+@asset(deps=["taxi_zones_file"])
+def taxi_zones():
+    sql_query = f"""
+        create or replace table zones as (
+            select
+                LocationID as zone_id,
+                zone,
+                borough,
+                the_geom as geometry
+            from '{constants.TAXI_ZONES_FILE_PATH}'
+        );
+    """
+
+    conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))
+    conn.execute(sql_query)
+
+
+@asset
+def taxi_zones_file():
+    """
+    The raw CSV file for the taxi zones dataset. Sourced from the NYC Open Data portal.
+    """
+    raw_taxi_zones = requests.get(
+        "https://data.cityofnewyork.us/api/views/755u-8jsi/rows.csv?accessType=DOWNLOAD"
+    )
+
+    with open(constants.TAXI_ZONES_FILE_PATH, "wb") as output_file:
+        output_file.write(raw_taxi_zones.content)
+
+
+@asset(deps=["taxi_trips_file"])
+def taxi_trips():
+    """
+    The raw taxi trips dataset, loaded into a DuckDB database
+    """
+    sql_query = """
+        create or replace table trips as (
+          select
+            VendorID as vendor_id,
+            PULocationID as pickup_zone_id,
+            DOLocationID as dropoff_zone_id,
+            RatecodeID as rate_code_id,
+            payment_type as payment_type,
+            tpep_dropoff_datetime as dropoff_datetime,
+            tpep_pickup_datetime as pickup_datetime,
+            trip_distance as trip_distance,
+            passenger_count as passenger_count,
+            total_amount as total_amount
+          from 'data/raw/taxi_trips_2023-03.parquet'
+        );
+    """
+
+    conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))
+    conn.execute(sql_query)
+
+
+@asset(deps=["taxi_trips", "taxi_zones"])
 def manhattan_stats():
     query = """
         select
@@ -31,6 +100,27 @@ def manhattan_stats():
     trips_by_zone["geometry"] = gpd.GeoSeries.from_wkt(trips_by_zone["geometry"])
     trips_by_zone = gpd.GeoDataFrame(trips_by_zone)
 
-    with open(constants.MANHATTAN_STATS_FILE_PATH, 'w') as output_file:
+    with open(constants.MANHATTAN_STATS_FILE_PATH, "w") as output_file:
         output_file.write(trips_by_zone.to_json())
 
+
+@asset(
+    deps=["manhattan_stats"],
+)
+def manhattan_map():
+    trips_by_zone = gpd.read_file(constants.MANHATTAN_STATS_FILE_PATH)
+
+    fig = px.choropleth_mapbox(
+        trips_by_zone,
+        geojson=trips_by_zone.geometry.__geo_interface__,
+        locations=trips_by_zone.index,
+        color="num_trips",
+        color_continuous_scale="Plasma",
+        mapbox_style="carto-positron",
+        center={"lat": 40.758, "lon": -73.985},
+        zoom=11,
+        opacity=0.7,
+        labels={"num_trips": "Number of Trips"},
+    )
+
+    pio.write_image(fig, constants.MANHATTAN_MAP_FILE_PATH)
