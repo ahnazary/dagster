@@ -11,7 +11,7 @@ from finance.src.postgres_assets import (
     tickers_list_table,
     valid_tickers_table,
 )
-from finance.src.utils import custom_logger
+from finance.utils import custom_logger
 
 
 @asset
