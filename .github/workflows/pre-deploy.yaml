@@ -40,19 +40,6 @@ jobs:
     name: check code style with isort
     uses: ahnazary/actions-library/.github/workflows/isort.yaml@main
 
-  flake8:
-    name: check code style with flake8
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.11
-      
-      - name: run flake8
-        run: |
-          pip install flake8
-          flake8 --max-line-length=99 --extend-ignore=E402
+  ruff:
+    name: check code style with ruff
+    uses: ahnazary/actions-library/.github/workflows/ruff.yaml@main
