@@ -32,9 +32,13 @@ jobs:
       run: |
         pylint $(git ls-files '*.py') --fail-under=1
 
-  format:
+  black:
     name: check code style with black
     uses: ahnazary/actions-library/.github/workflows/black.yaml@main
+
+  isort:
+    name: check code style with isort
+    uses: ahnazary/actions-library/.github/workflows/isort.yaml@main
 
   flake8:
     name: check code style with flake8
