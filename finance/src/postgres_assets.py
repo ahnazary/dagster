@@ -17,7 +17,7 @@ from dagster import (
     mem_io_manager,
     multi_asset,
 )
-from finance.src.utils import custom_logger
+from finance.utils import custom_logger
 
 logger = custom_logger(__name__)
 

@@ -5,6 +5,7 @@ import geopandas as gpd
 import plotly.express as px
 import plotly.io as pio
 import requests
+
 from dagster import asset
 
 from . import constants
@@ -22,6 +23,7 @@ def taxi_trips_file():
         constants.TAXI_TRIPS_TEMPLATE_FILE_PATH.format(month_to_fetch), "wb"
     ) as output_file:
         output_file.write(raw_trips.content)
+
 
 @asset(deps=["taxi_trips_file"])
 def taxi_trips():
@@ -47,7 +49,6 @@ def taxi_trips():
 
     conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))
     conn.execute(sql_query)
-
 
 
 @asset(deps=["taxi_zones_file"])
@@ -125,14 +126,15 @@ def manhattan_map():
 
     pio.write_image(fig, constants.MANHATTAN_MAP_FILE_PATH)
 
+
 from datetime import datetime, timedelta
-from . import constants
 
 import pandas as pd
 
-@asset(
-    deps=["taxi_trips"]
-)
+from . import constants
+
+
+@asset(deps=["taxi_trips"])
 def trips_by_week():
     conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))
 
@@ -152,12 +154,19 @@ def trips_by_week():
 
         data_for_week = conn.execute(query).fetch_df()
 
-        aggregate = data_for_week.agg({
-            "vendor_id": "count",
-            "total_amount": "sum",
-            "trip_distance": "sum",
-            "passenger_count": "sum"
-        }).rename({"vendor_id": "num_trips"}).to_frame().T # type: ignore
+        aggregate = (
+            data_for_week.agg(
+                {
+                    "vendor_id": "count",
+                    "total_amount": "sum",
+                    "trip_distance": "sum",
+                    "passenger_count": "sum",
+                }
+            )
+            .rename({"vendor_id": "num_trips"})
+            .to_frame()
+            .T
+        )  # type: ignore
 
         aggregate["period"] = current_date
 
@@ -166,11 +175,13 @@ def trips_by_week():
         current_date += timedelta(days=7)
 
     # clean up the formatting of the dataframe
-    result['num_trips'] = result['num_trips'].astype(int)
-    result['passenger_count'] = result['passenger_count'].astype(int)
-    result['total_amount'] = result['total_amount'].round(2).astype(float)
-    result['trip_distance'] = result['trip_distance'].round(2).astype(float)
-    result = result[["period", "num_trips", "total_amount", "trip_distance", "passenger_count"]]
+    result["num_trips"] = result["num_trips"].astype(int)
+    result["passenger_count"] = result["passenger_count"].astype(int)
+    result["total_amount"] = result["total_amount"].round(2).astype(float)
+    result["trip_distance"] = result["trip_distance"].round(2).astype(float)
+    result = result[
+        ["period", "num_trips", "total_amount", "trip_distance", "passenger_count"]
+    ]
     result = result.sort_values(by="period")
 
     result.to_csv(constants.TRIPS_BY_WEEK_FILE_PATH, index=False)

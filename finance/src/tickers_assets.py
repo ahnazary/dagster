@@ -87,21 +87,3 @@ def tickers_to_query_from_yahoo() -> list:
         result = conn.execute(query).fetchmany(self.batch_size)
 
     return [result[0] for result in result]
-
-
-defs = Definitions(
-    assets=[
-        neon_postgres_engine,
-        postgres_schema,
-        balance_sheet_table,
-        cashflow_table,
-        income_stmt_table,
-        financials_table,
-        tickers_list_table,
-        valid_tickers_table,
-    ],
-    resources={
-        "io_manager": mem_io_manager,
-    },
-    executor=in_process_executor,
-)
